@@ -13,6 +13,7 @@ import javax.crypto.CipherOutputStream
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import javax.crypto.spec.GCMParameterSpec
 
 
 /** FileEncrypterPlugin */
@@ -33,8 +34,9 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         inFileName: String, outFileName: String, callback: (Result<String>) -> Unit
     ) {
         CoroutineScope(IO).launch {
-            val cipher = Cipher.getInstance(transformation)
-            val secretKey = KeyGenerator.getInstance(algorithm).generateKey()
+            // val cipher = Cipher.getInstance(transformation)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            val secretKey = KeyGenerator.getInstance("AES").generateKey()
 
             try {
                 encryptFile(inFileName, outFileName, cipher, secretKey)
@@ -51,9 +53,11 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         key: String, inFileName: String, outFileName: String, callback: (Result<Unit>) -> Unit
     ) {
         CoroutineScope(IO).launch {
-            val cipher = Cipher.getInstance(transformation)
+            // val cipher = Cipher.getInstance(transformation)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             val encodedKey = Base64.decode(key, Base64.DEFAULT)
-            val secretKey = SecretKeySpec(encodedKey, 0, encodedKey.size, algorithm)
+            // val secretKey = SecretKeySpec(encodedKey, 0, encodedKey.size, algorithm)
+            val secretKey = SecretKeySpec(encodedKey, "AES")
 
             try {
                 decryptFile(inFileName, outFileName, cipher, secretKey)
@@ -96,9 +100,11 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         secretKey: javax.crypto.SecretKey
     ) {
         FileInputStream(inFileName).use { fileIn ->
-            val fileIv = ByteArray(16)
+            val fileIv = ByteArray(12)
             fileIn.read(fileIv)
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(fileIv))
+            // cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(fileIv))
+            val gcmParameterSpec = GCMParameterSpec(128, fileIv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec)
 
             CipherInputStream(fileIn, cipher).use { cipherIn ->
                 val buffer = ByteArray(bufferSize)
