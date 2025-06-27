@@ -99,23 +99,44 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         cipher: Cipher,
         secretKey: javax.crypto.SecretKey
     ) {
-        FileInputStream(inFileName).use { fileIn ->
-            val fileIv = ByteArray(12)
-            fileIn.read(fileIv)
-            // cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(fileIv))
-            val gcmParameterSpec = GCMParameterSpec(128, fileIv)
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec)
+        var inputStream = FileInputStream(inFileName)
+        var outputStream = FileOutputStream(outFileName)
 
-            CipherInputStream(fileIn, cipher).use { cipherIn ->
-                val buffer = ByteArray(bufferSize)
-                FileOutputStream(outFileName).use { fileOut ->
-                    var byteCount = cipherIn.read(buffer)
-                    while (byteCount != -1) {
-                        fileOut.write(buffer, 0, byteCount)
-                        byteCount = cipherIn.read(buffer)
-                    }
-                }
-            }
+        val fileIv = ByteArray(12)
+        inputStream.read(fileIv)
+        val gcmParameterSpec = GCMParameterSpec(128, fileIv)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec)
+
+        val buffer = ByteArray(4096) // Adjust buffer size as needed
+        var bytesRead: Int
+
+        // Read and decrypt chunks
+        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+            val decryptedBytes = cipher.update(buffer, 0, bytesRead)
+            decryptedBytes?.let { outputStream.write(it) }
         }
+
+        // Finalize decryption and verify the authentication tag
+        val finalDecryptedBytes = cipher.doFinal()
+        finalDecryptedBytes?.let { outputStream.write(it) }
+
+        // FileInputStream(inFileName).use { fileIn ->
+        //     val fileIv = ByteArray(12)
+        //     fileIn.read(fileIv)
+        //     // cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(fileIv))
+        //     val gcmParameterSpec = GCMParameterSpec(128, fileIv)
+        //     cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec)
+
+        //     val buffer = ByteArray(bufferSize)
+        //     CipherInputStream(fileIn, cipher).use { cipherIn ->
+        //         FileOutputStream(outFileName).use { fileOut ->
+        //             var byteCount = cipherIn.read(buffer)
+        //             while (byteCount != -1) {
+        //                 fileOut.write(buffer, 0, byteCount)
+        //                 byteCount = cipherIn.read(buffer)
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
