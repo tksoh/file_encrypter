@@ -19,7 +19,7 @@ import javax.crypto.spec.GCMParameterSpec
 /** FileEncrypterPlugin */
 class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
     private val algorithm = "AES"
-    private val transformation = "AES/CBC/PKCS5Padding"
+    private val transformation = "AES/CTR/NoPadding"
     private val bufferSize = 131072
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -34,9 +34,8 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         inFileName: String, outFileName: String, callback: (Result<String>) -> Unit
     ) {
         CoroutineScope(IO).launch {
-            // val cipher = Cipher.getInstance(transformation)
-            val cipher = Cipher.getInstance("AES/CTR/NoPadding")
-            val secretKey = KeyGenerator.getInstance("AES").generateKey()
+            val cipher = Cipher.getInstance(transformation)
+            val secretKey = KeyGenerator.getInstance(algorithm).generateKey()
 
             try {
                 encryptFile(inFileName, outFileName, cipher, secretKey)
@@ -54,12 +53,10 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         key: String, inFileName: String, outFileName: String, callback: (Result<Unit>) -> Unit
     ) {
         CoroutineScope(IO).launch {
-            // val cipher = Cipher.getInstance(transformation)
-            val cipher = Cipher.getInstance("AES/CTR/NoPadding")
+            val cipher = Cipher.getInstance(transformation)
             val encodedKey = Base64.decode(key, Base64.DEFAULT)
             println("decrypt: secretKey = $key");
             val secretKey = SecretKeySpec(encodedKey, 0, encodedKey.size, algorithm)
-            // val secretKey = SecretKeySpec(encodedKey, "AES")
 
             try {
                 decryptFile(inFileName, outFileName, cipher, secretKey)
@@ -78,11 +75,10 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         secretKey: javax.crypto.SecretKey
     ) {
         FileOutputStream(outFileName).use { fileOut ->
-            // cipher.init(Cipher.ENCRYPT_MODE, secretKey, IvParameterSpec(iv))
             cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            val autoIv = cipher.iv
-            fileOut.write(autoIv)
-            val encodedIv = Base64.encodeToString(autoIv, Base64.DEFAULT)
+            val iv = cipher.iv
+            fileOut.write(iv)
+            val encodedIv = Base64.encodeToString(iv, Base64.DEFAULT)
             println("Encrypting: IV value=$encodedIv")
 
             CipherOutputStream(fileOut, cipher).use { cipherOut ->
@@ -107,12 +103,13 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         FileInputStream(inFileName).use { fileIn ->
             val fileIv = ByteArray(16)
             fileIn.read(fileIv)
-            val encodedIv = Base64.encodeToString(fileIv, Base64.DEFAULT)
-            println("Decrypting: IV value=$encodedIv")
             cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(fileIv))
 
-            val buffer = ByteArray(bufferSize)
+            val encodedIv = Base64.encodeToString(fileIv, Base64.DEFAULT)
+            println("Decrypting: IV value=$encodedIv")
+
             CipherInputStream(fileIn, cipher).use { cipherIn ->
+                val buffer = ByteArray(bufferSize)
                 FileOutputStream(outFileName).use { fileOut ->
                     var byteCount = cipherIn.read(buffer)
                     while (byteCount != -1) {
