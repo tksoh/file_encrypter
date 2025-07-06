@@ -37,7 +37,6 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
             // val cipher = Cipher.getInstance(transformation)
             val cipher = Cipher.getInstance("AES/CTR/NoPadding")
             val secretKey = KeyGenerator.getInstance("AES").generateKey()
-            // val secretKey = SecretKeySpec("Your16ByteAESKey".toByteArray(), "AES")
 
             try {
                 encryptFile(inFileName, outFileName, cipher, secretKey)
@@ -61,7 +60,6 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
             println("decrypt: secretKey = $key");
             val secretKey = SecretKeySpec(encodedKey, 0, encodedKey.size, algorithm)
             // val secretKey = SecretKeySpec(encodedKey, "AES")
-            // val secretKey = SecretKeySpec("Your16ByteAESKey".toByteArray(), "AES")
 
             try {
                 decryptFile(inFileName, outFileName, cipher, secretKey)
@@ -79,13 +77,13 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         cipher: Cipher,
         secretKey: javax.crypto.SecretKey
     ) {
-        val iv = "Your16ByteIVHere".toByteArray()
-
         FileOutputStream(outFileName).use { fileOut ->
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, IvParameterSpec(iv))
-            // val iv = cipher.iv
-            // fileOut.write(iv)
-            // println("Encrypting: IV value=$iv")
+            // cipher.init(Cipher.ENCRYPT_MODE, secretKey, IvParameterSpec(iv))
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+            val autoIv = cipher.iv
+            fileOut.write(autoIv)
+            val encodedIv = Base64.encodeToString(autoIv, Base64.DEFAULT)
+            println("Encrypting: IV value=$encodedIv")
 
             CipherOutputStream(fileOut, cipher).use { cipherOut ->
                 val buffer = ByteArray(bufferSize)
@@ -106,13 +104,12 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         cipher: Cipher,
         secretKey: javax.crypto.SecretKey
     ) {
-        val iv = "Your16ByteIVHere".toByteArray()
-
         FileInputStream(inFileName).use { fileIn ->
-            // val fileIv = ByteArray(10)
-            // fileIn.read(fileIv)
-            // println("Decrypting: IV value=$fileIv")
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(iv))
+            val fileIv = ByteArray(16)
+            fileIn.read(fileIv)
+            val encodedIv = Base64.encodeToString(fileIv, Base64.DEFAULT)
+            println("Decrypting: IV value=$encodedIv")
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(fileIv))
 
             val buffer = ByteArray(bufferSize)
             CipherInputStream(fileIn, cipher).use { cipherIn ->
