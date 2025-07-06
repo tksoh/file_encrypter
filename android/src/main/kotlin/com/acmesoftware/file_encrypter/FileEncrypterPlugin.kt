@@ -36,12 +36,13 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         CoroutineScope(IO).launch {
             // val cipher = Cipher.getInstance(transformation)
             val cipher = Cipher.getInstance("AES/CTR/NoPadding")
-            // val secretKey = KeyGenerator.getInstance("AES").generateKey()
-            val secretKey = SecretKeySpec("Your16ByteAESKey".toByteArray(), "AES")
+            val secretKey = KeyGenerator.getInstance("AES").generateKey()
+            // val secretKey = SecretKeySpec("Your16ByteAESKey".toByteArray(), "AES")
 
             try {
                 encryptFile(inFileName, outFileName, cipher, secretKey)
                 val cipheredText = Base64.encodeToString(secretKey.encoded, Base64.DEFAULT)
+                println("encrypt: secretKey = $cipheredText");
                 callback(Result.success(cipheredText))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -57,9 +58,10 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
             // val cipher = Cipher.getInstance(transformation)
             val cipher = Cipher.getInstance("AES/CTR/NoPadding")
             val encodedKey = Base64.decode(key, Base64.DEFAULT)
-            // val secretKey = SecretKeySpec(encodedKey, 0, encodedKey.size, algorithm)
+            println("decrypt: secretKey = $key");
+            val secretKey = SecretKeySpec(encodedKey, 0, encodedKey.size, algorithm)
             // val secretKey = SecretKeySpec(encodedKey, "AES")
-            val secretKey = SecretKeySpec("Your16ByteAESKey".toByteArray(), "AES")
+            // val secretKey = SecretKeySpec("Your16ByteAESKey".toByteArray(), "AES")
 
             try {
                 decryptFile(inFileName, outFileName, cipher, secretKey)
