@@ -18,7 +18,7 @@ import javax.crypto.spec.SecretKeySpec
 /** FileEncrypterPlugin */
 class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
     private val algorithm = "AES"
-    private val transformation = "AES/CBC/PKCS5Padding"
+    private val transformation = "AES/CTR/NoPadding"
     private val bufferSize = 131072
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
