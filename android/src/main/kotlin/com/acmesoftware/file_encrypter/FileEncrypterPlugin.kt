@@ -75,21 +75,39 @@ class FileEncrypterPlugin : FlutterPlugin, FileEncrypterApi {
         cipher: Cipher,
         secretKey: javax.crypto.SecretKey
     ) {
-        FileOutputStream(outFileName).use { fileOut ->
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            val iv = cipher.iv
-            fileOut.write(iv)
+        // original file encrypter routine
+        // FileOutputStream(outFileName).use { fileOut ->
+        //     cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        //     val iv = cipher.iv
+        //     fileOut.write(iv)
 
-            CipherOutputStream(fileOut, cipher).use { cipherOut ->
-                val buffer = ByteArray(bufferSize)
-                FileInputStream(inFileName).use { fileIn ->
-                    var byteCount = fileIn.read(buffer)
-                    while (byteCount != -1) {
-                        cipherOut.write(buffer, 0, byteCount)
-                        byteCount = fileIn.read(buffer)
-                    }
-                }
-            }
+        //     CipherOutputStream(fileOut, cipher).use { cipherOut ->
+        //         val buffer = ByteArray(bufferSize)
+        //         FileInputStream(inFileName).use { fileIn ->
+        //             var byteCount = fileIn.read(buffer)
+        //             while (byteCount != -1) {
+        //                 cipherOut.write(buffer, 0, byteCount)
+        //                 byteCount = fileIn.read(buffer)
+        //             }
+        //         }
+        //     }
+        // }
+
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        FileInputStream(inFileName).use { fis ->
+          FileOutputStream(outFileName).use { fos ->
+              // Prepend nonce to the output file for easy retrieval during decryption
+              val iv = cipher.iv
+              fos.write(iv)
+
+              CipherOutputStream(fos, cipher).use { cos ->
+                  val buffer = ByteArray(4096) // Chunk size
+                  var bytesRead: Int
+                  while (fis.read(buffer).also { bytesRead = it } != -1) {
+                      cos.write(buffer, 0, bytesRead)
+                  }
+              }
+          }
         }
     }
 
